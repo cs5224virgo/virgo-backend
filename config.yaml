@@ -1,0 +1,6 @@
+env: dev
+port: "7000"
+dbhostname: "127.0.0.1"
+dbname: virgo
+dbusername: virgo
+dbpassword: virgo
