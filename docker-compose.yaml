@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  virgo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    entrypoint: ["/bin/sh"]
+    command: ["-c", "/app/virgo migrate && /app/virgo server"]
+    image: virgo
+    ports:
+      - "7000:7000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: virgo
+      POSTGRES_PASSWORD: virgo
+      POSTGRES_DB: virgo
+    volumes:
+      - virgo_db:/var/lib/postgresql/data
+
+volumes:
+  virgo_db:

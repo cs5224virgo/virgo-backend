@@ -111,6 +111,6 @@ func PrintVersion() error {
 	if err != nil {
 		return perrors.Wrap(err, "unable to query for version")
 	}
-	fmt.Printf("version=%d dirty=%t\n", version, dirty)
+	logger.Infof("Current migration version=%d dirty=%t\n", version, dirty)
 	return nil
 }

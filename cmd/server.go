@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -14,8 +16,16 @@ var serverCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		logger.Info("server called")
-		dbname := viper.GetString("dbname")
-		logger.Info("dbname= ", dbname)
+		dbname := viper.GetString("db.name")
+		logger.Info("db.name= ", dbname)
+
+		time.Sleep(1000 * time.Second)
+
+		// err := db.Migrate()
+		// if err != nil {
+		// 	logger.Fatal("unable to perform migration:", err)
+		// }
+		// logger.Info("Migrations completed successfully")
 	},
 }
 

@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/cs5224virgo/virgo/db"
+	"github.com/cs5224virgo/virgo/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +12,15 @@ var migrateCmd = &cobra.Command{
 	Long:  `Perform migrations on the db`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("migrate called")
+		err := db.Migrate()
+		if err != nil {
+			logger.Fatal("unable to perform migration:", err)
+		}
+		logger.Info("Migrations completed successfully")
+		err = db.PrintVersion()
+		if err != nil {
+			logger.Fatal("unable to print migration version:", err)
+		}
 	},
 }
 
@@ -21,7 +29,10 @@ var migrateVersionCmd = &cobra.Command{
 	Short: "Print current migration version",
 	Long:  `Print current migration version`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("version called")
+		err := db.PrintVersion()
+		if err != nil {
+			logger.Fatal("unable to print migration version:", err)
+		}
 	},
 }
 

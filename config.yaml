@@ -1,6 +1,8 @@
 env: dev
 port: "7000"
-dbhostname: "127.0.0.1"
-dbname: virgo
-dbusername: virgo
-dbpassword: virgo
+db:
+  username: virgo
+  password: virgo
+  hostname: postgres
+  port: 5432
+  name: virgo
