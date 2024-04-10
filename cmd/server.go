@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"time"
-
+	"github.com/cs5224virgo/virgo/db"
+	"github.com/cs5224virgo/virgo/internal/api"
+	"github.com/cs5224virgo/virgo/internal/datalayer"
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,13 +20,40 @@ var serverCmd = &cobra.Command{
 		dbname := viper.GetString("db.name")
 		logger.Info("db.name= ", dbname)
 
-		time.Sleep(1000 * time.Second)
+		db, err := db.InitDB()
+		if err != nil {
+			logger.Fatal("cannot connect to DB:", err)
+		}
+		logger.Info("Connected to DB successfully")
 
-		// err := db.Migrate()
-		// if err != nil {
-		// 	logger.Fatal("unable to perform migration:", err)
-		// }
-		// logger.Info("Migrations completed successfully")
+		// init datalayer
+		data := datalayer.NewDataLayer(db)
+
+		// init apiserver
+		api := api.NewAPIServer(data)
+
+		// lmao
+		logger.Info(`
+   _            .                                         
+  u            @88>                                       
+ 88Nu.   u.    %8P      .u    .                      u.   
+'88888.o888c    .     .d88B :@8c       uL      ...ue888b  
+ ^8888  8888  .@88u  ="8888f8888r  .ue888Nc..  888R Y888r 
+  8888  8888 ''888E'   4888>'88"  d88E'"888E'  888R I888> 
+  8888  8888   888E    4888> '    888E  888E   888R I888> 
+  8888  8888   888E    4888>      888E  888E   888R I888> 
+ .8888b.888P   888E   .d888L .+   888E  888E  u8888cJ888  
+  ^Y8888*""    888&   ^"8888*"    888& .888E   "*888*P"   
+    'Y"        R888"     "Y"      *888" 888&     'Y"      
+                ""                 '"   "888E             
+                                  .dWi   '88E             
+                                  4888~  J8%              
+                                   ^"===*"'               
+
+		`)
+
+		// run
+		api.Run()
 	},
 }
 

@@ -66,4 +66,10 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		logger.Info("Using config file:", viper.ConfigFileUsed())
 	}
+
+	// default values
+	viper.SetDefault("frontend_url", "http://localhost:3000")
+	viper.SetDefault("session_cookie_key", "arandomkey")
+	viper.SetDefault("jwt_signing_key", "averysecurekey")
+	viper.SetDefault("password_pepper", "averysecurepeppervalue")
 }
