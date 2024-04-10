@@ -1,8 +1,6 @@
 package api
 
 import (
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -35,13 +33,13 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	router.Use(corsMiddleware())
 
 	// Sessions middleware
-	store := cookie.NewStore([]byte(viper.GetString("session_cookie_key")))
-	store.Options(sessions.Options{
-		HttpOnly: true,
-		MaxAge:   604800, // a week
-		Path:     "/",
-	})
-	router.Use(sessions.Sessions("virgo_session", store))
+	// store := cookie.NewStore([]byte(viper.GetString("session_cookie_key")))
+	// store.Options(sessions.Options{
+	// 	HttpOnly: true,
+	// 	MaxAge:   604800, // a week
+	// 	Path:     "/",
+	// })
+	// router.Use(sessions.Sessions("virgo_session", store))
 
 	// login detector
 	// router.Use(loginDetector())
@@ -58,6 +56,7 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	userRoutes := v1.Group("/users")
 	userRoutes.POST("/checkAvailability", s.handleCheckAvailability)
 	userRoutes.POST("/register", s.registerNewUser)
+	userRoutes.POST("/login", s.userLogin)
 
 	return router
 }

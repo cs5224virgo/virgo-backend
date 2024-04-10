@@ -7,4 +7,5 @@ import (
 type APIDataLayer interface {
 	IsUsernameAvailable(username string) (bool, error)
 	CreateUser(params sqlc.CreateUserParams) error
+	AuthenticateUser(username string, hashedPassword string) (user sqlc.User, token string, err error)
 }
