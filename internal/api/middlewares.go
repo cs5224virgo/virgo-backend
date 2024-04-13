@@ -1,6 +1,10 @@
 package api
 
 import (
+	"net/http"
+	"strings"
+
+	sqlc "github.com/cs5224virgo/virgo/db/generated"
 	"github.com/cs5224virgo/virgo/internal/jwt"
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/gin-gonic/gin"
@@ -23,32 +27,48 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-// if an user is logged in (indicated by the JWT in the cookie), then we check the JWT
-// and extract the user for all handlers to use
-func loginDetector() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		ok := checkJWT(c)
-		if !ok {
-			logger.Info("No JWT detected. A Guest!")
-		} else {
-			// u := getCurrentAuthUser(c)
-			// logger.Info("Browsing as user", u.Email)
-		}
-
-		// c.Next()
+// authMiddleware : make sure restricted paths are protected
+func (s *APIServer) authMiddleware(c *gin.Context) {
+	ok := s.checkJWT(c)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
 	}
+	c.Next()
 }
 
-func checkJWT(c *gin.Context) bool {
+// if an user is logged in (indicated by the JWT in the cookie), then we check the JWT
+// and extract the user for all handlers to use
+// func loginDetector() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		ok := checkJWT(c)
+// 		if !ok {
+// 			logger.Info("No JWT detected. A Guest!")
+// 		} else {
+// 			// u := getCurrentAuthUser(c)
+// 			// logger.Info("Browsing as user", u.Email)
+// 		}
+
+// 		// c.Next()
+// 	}
+// }
+
+func (s *APIServer) checkJWT(c *gin.Context) bool {
 	// get the raw jwt from cookie
-	tokenString, err := c.Cookie("auth")
-	if err != nil {
-		logger.Info("error getting jwt from cookies:", err, ". Assuming not logged in.")
+	// tokenString, err := c.Cookie("auth")
+	rawHeader := c.GetHeader("Authorization")
+	tokenString, ok := strings.CutPrefix(rawHeader, "Bearer ")
+	if !ok {
+		logger.Warn("invalid auth header. assuming not logged in")
 		return false
 	}
+	// if err != nil {
+	// 	logger.Info("error getting jwt from cookies:", err, ". Assuming not logged in.")
+	// 	return false
+	// }
 
 	if tokenString == "" {
-		logger.Warn("blank cookie. assuming not logged in")
+		logger.Warn("blank auth header. assuming not logged in")
 		return false
 	}
 
@@ -58,29 +78,28 @@ func checkJWT(c *gin.Context) bool {
 		logger.Warn("error parsing jwt:", err)
 		return false
 	}
-	logger.Info(claims)
+	// logger.Info(claims)
 
 	// we have the claims. does this user actually exist in db?
-	// user := gorm.User{}
-	// err = user.PopulateByID(claims.UserID)
-	// if err != nil {
-	// 	logger.Error("error looking up user from jwt:", err)
-	// 	return false
-	// }
+	user, err := s.DataLayer.GetUserByID(claims.UserID)
+	if err != nil {
+		logger.Error("error looking up user from jwt:", err)
+		return false
+	}
 
 	// save the user and the claim to gin's storage
-	// c.Set("currentUser", &user)
-	// c.Set("claims", claims)
+	c.Set("currentUser", user)
+	c.Set("claims", claims)
 
 	return true
 }
 
 // get current user from gin store. If not logged in, will return a nil pointer
-// func getCurrentAuthUser(c *gin.Context) *gorm.User {
-// 	if user, ok := c.Get("currentUser"); ok && user != nil {
-// 		if user2, ok2 := user.(*gorm.User); ok2 && user2 != nil {
-// 			return user2
-// 		}
-// 	}
-// 	return nil
-// }
+func getCurrentAuthUser(c *gin.Context) *sqlc.User {
+	if user, ok := c.Get("currentUser"); ok && user != nil {
+		if user2, ok2 := user.(*sqlc.User); ok2 && user2 != nil {
+			return user2
+		}
+	}
+	return nil
+}

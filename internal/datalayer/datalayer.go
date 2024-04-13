@@ -15,6 +15,7 @@ import (
 )
 
 var ErrLoginFailed = errors.New("authentication failed")
+var ErrIDZero = errors.New("id is zero")
 
 type DataLayer struct {
 	DB *db.DB
@@ -57,6 +58,17 @@ func (s *DataLayer) CreateUser(params sqlc.CreateUserParams) error {
 		return fmt.Errorf("query to create user failed: %w", err)
 	}
 	return nil
+}
+
+func (s *DataLayer) GetUserByID(id uint) (*sqlc.User, error) {
+	if id == 0 {
+		return nil, ErrIDZero
+	}
+	user, err := s.DB.Queries.GetUserByID(context.Background(), int32(id))
+	if err != nil {
+		return nil, fmt.Errorf("db query failed: %w", err)
+	}
+	return &user, nil
 }
 
 func (s *DataLayer) AuthenticateUser(username string, pepperedPassword string) (user sqlc.User, token string, err error) {

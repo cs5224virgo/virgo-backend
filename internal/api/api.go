@@ -58,6 +58,9 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	userRoutes.POST("/register", s.registerNewUser)
 	userRoutes.POST("/login", s.userLogin)
 
+	roomRoutes := v1.Group("/rooms", s.authMiddleware)
+	roomRoutes.GET("/", s.handleGetRooms)
+
 	return router
 }
 
