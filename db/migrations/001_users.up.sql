@@ -10,4 +10,3 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE INDEX ON users (deleted_at);
-CREATE INDEX ON users (username);

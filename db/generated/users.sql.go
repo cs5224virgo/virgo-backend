@@ -131,9 +131,9 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
 SET (
-    username, password, display_name
+    username, password, display_name, updated_at
 ) = (
-    $2, $3, $4
+    $2, $3, $4, NOW()
 )
 WHERE id = $1 AND deleted_at IS NULL
 `

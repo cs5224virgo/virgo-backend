@@ -6,8 +6,80 @@ package sqlc
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 )
+
+type MessageType string
+
+const (
+	MessageTypeNormal  MessageType = "normal"
+	MessageTypeSystem  MessageType = "system"
+	MessageTypeSummary MessageType = "summary"
+)
+
+func (e *MessageType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageType(s)
+	case string:
+		*e = MessageType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageType: %T", src)
+	}
+	return nil
+}
+
+type NullMessageType struct {
+	MessageType MessageType
+	Valid       bool // Valid is true if MessageType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageType), nil
+}
+
+type Message struct {
+	ID        int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+	Content   string
+	Type      MessageType
+	UserID    int32
+	RoomID    int32
+}
+
+type Room struct {
+	ID          int32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   sql.NullTime
+	Code        string
+	Name        string
+	Description sql.NullString
+}
+
+type RoomsUsersMembership struct {
+	RoomID int32
+	UserID int32
+	Unread int32
+}
 
 type User struct {
 	ID          int32

@@ -22,9 +22,9 @@ RETURNING *;
 -- name: UpdateUser :exec
 UPDATE users
 SET (
-    username, password, display_name
+    username, password, display_name, updated_at
 ) = (
-    $2, $3, $4
+    $2, $3, $4, NOW()
 )
 WHERE id = $1 AND deleted_at IS NULL;
 
