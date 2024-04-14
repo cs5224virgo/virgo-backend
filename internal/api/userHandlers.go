@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	sqlc "github.com/cs5224virgo/virgo/db/generated"
 	"github.com/cs5224virgo/virgo/internal/datalayer"
+	"github.com/cs5224virgo/virgo/internal/jwt"
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -135,6 +137,24 @@ func (s *APIServer) userLogin(c *gin.Context) {
 	if user.DisplayName.Valid {
 		res.Data.UserDetails.DisplayName = &user.DisplayName.String
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (s *APIServer) getUserWsToken(c *gin.Context) {
+	user := getCurrentAuthUser(c)
+	expire := time.Now().Add(time.Second * 10) // a very short-lived token
+	token, err := jwt.NewToken(uint(user.ID), user.Username, expire)
+	if err != nil {
+		failureResponse(c, http.StatusInternalServerError, fmt.Sprint(err))
+	}
+
+	type resStruct struct {
+		BaseResponse
+		WsToken string `json:"wsToken"`
+	}
+	var res resStruct
+	res.Success = true
+	res.WsToken = token
 	c.JSON(http.StatusOK, res)
 }
 

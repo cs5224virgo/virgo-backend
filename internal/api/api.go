@@ -1,19 +1,25 @@
 package api
 
 import (
+	"net/http"
+
+	"github.com/cs5224virgo/virgo/internal/jwt"
+	"github.com/cs5224virgo/virgo/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
 type APIServer struct {
-	DataLayer APIDataLayer
+	DataLayer    APIDataLayer
+	WebSocketHub WebSocketHub
 
 	router *gin.Engine
 }
 
-func NewAPIServer(datalayer APIDataLayer) *APIServer {
+func NewAPIServer(datalayer APIDataLayer, hub WebSocketHub) *APIServer {
 	sv := APIServer{
-		DataLayer: datalayer,
+		DataLayer:    datalayer,
+		WebSocketHub: hub,
 	}
 	sv.router = sv.initRoutes()
 	return &sv
@@ -57,9 +63,12 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	userRoutes.POST("/checkAvailability", s.handleCheckAvailability)
 	userRoutes.POST("/register", s.registerNewUser)
 	userRoutes.POST("/login", s.userLogin)
+	userRoutes.GET("/wstoken", s.getUserWsToken)
 
 	roomRoutes := v1.Group("/rooms", s.authMiddleware)
 	roomRoutes.GET("/", s.handleGetRooms)
+
+	v1.GET("/ws", s.handleWebSocket)
 
 	return router
 }
@@ -71,4 +80,34 @@ func (s *APIServer) Run() {
 
 func handlePing(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "pong"})
+}
+
+func (s *APIServer) handleWebSocket(c *gin.Context) {
+	tokenString := c.Param("token")
+	if tokenString == "" {
+		failureResponse(c, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	claims, err := jwt.ParseToken(tokenString)
+	if err != nil {
+		logger.Error(err)
+		failureResponse(c, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	user, err := s.DataLayer.GetUserByID(claims.UserID)
+	if err != nil {
+		logger.Error("error looking up user from jwt:", err)
+		failureResponse(c, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	roomCodes, err := s.DataLayer.GetRoomCodesByUserID(user.ID)
+	if err != nil {
+		logger.Error("error getting room codes:", err)
+		failureResponse(c, http.StatusInternalServerError, "db error")
+		return
+	}
+	s.WebSocketHub.ServeWs(c, user.Username, roomCodes)
 }

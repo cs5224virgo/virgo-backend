@@ -79,3 +79,23 @@ func (s *DataLayer) GetRoomsByUserID(userID int32) ([]DetailedRoom, error) {
 	}
 	return detailedRooms, nil
 }
+
+func (s *DataLayer) GetRoomCodesByUserID(userID int32) ([]string, error) {
+	if userID == 0 {
+		return nil, ErrIDZero
+	}
+	rooms, err := s.DB.Queries.GetRoomsByUser(context.Background(), userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("database failure: %w", err)
+	}
+
+	roomCodes := []string{}
+	for _, room := range rooms {
+		roomCodes = append(roomCodes, room.Code)
+	}
+
+	return roomCodes, nil
+}
