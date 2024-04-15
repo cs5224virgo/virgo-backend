@@ -13,8 +13,9 @@ type APIDataLayer interface {
 	GetUserByID(id uint) (*sqlc.User, error)
 	GetRoomsByUserID(userID int32) ([]datalayer.DetailedRoom, error)
 	GetRoomCodesByUserID(userID int32) ([]string, error)
+	CreateRoom(userID int32, roomName string, roomDescription *string) (datalayer.DetailedRoom, error)
 }
 
 type WebSocketHub interface {
-	ServeWs(c *gin.Context, username string, roomCodes []string)
+	ServeWs(c *gin.Context, username string)
 }

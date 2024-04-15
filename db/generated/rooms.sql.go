@@ -213,20 +213,24 @@ func (q *Queries) GetUsersInARoom(ctx context.Context, roomID int32) ([]User, er
 	return items, nil
 }
 
-const setUnreadCountByUserIDRoomID = `-- name: SetUnreadCountByUserIDRoomID :exec
+const setUnreadCountByUsernameRoomCode = `-- name: SetUnreadCountByUsernameRoomCode :exec
 UPDATE rooms_users_memberships
 SET unread = $3
-WHERE user_id = $1 AND room_id = $2
+FROM rooms, users
+WHERE rooms_users_memberships.room_id = rooms.id
+  AND rooms_users_memberships.user_id = users.id
+  AND users.username = $1
+  AND rooms.code = $2
 `
 
-type SetUnreadCountByUserIDRoomIDParams struct {
-	UserID int32
-	RoomID int32
-	Unread int32
+type SetUnreadCountByUsernameRoomCodeParams struct {
+	Username string
+	Code     string
+	Unread   int32
 }
 
-func (q *Queries) SetUnreadCountByUserIDRoomID(ctx context.Context, arg SetUnreadCountByUserIDRoomIDParams) error {
-	_, err := q.db.ExecContext(ctx, setUnreadCountByUserIDRoomID, arg.UserID, arg.RoomID, arg.Unread)
+func (q *Queries) SetUnreadCountByUsernameRoomCode(ctx context.Context, arg SetUnreadCountByUsernameRoomCodeParams) error {
+	_, err := q.db.ExecContext(ctx, setUnreadCountByUsernameRoomCode, arg.Username, arg.Code, arg.Unread)
 	return err
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/cs5224virgo/virgo/db"
 	"github.com/cs5224virgo/virgo/internal/api"
 	"github.com/cs5224virgo/virgo/internal/datalayer"
+	"github.com/cs5224virgo/virgo/internal/socket"
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,8 +30,11 @@ var serverCmd = &cobra.Command{
 		// init datalayer
 		data := datalayer.NewDataLayer(db)
 
+		// init websocket
+		hub := socket.NewWebSocketHub(data)
+
 		// init apiserver
-		api := api.NewAPIServer(data)
+		api := api.NewAPIServer(data, hub)
 
 		// lmao
 		logger.Info(`

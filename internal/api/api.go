@@ -63,10 +63,11 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	userRoutes.POST("/checkAvailability", s.handleCheckAvailability)
 	userRoutes.POST("/register", s.registerNewUser)
 	userRoutes.POST("/login", s.userLogin)
-	userRoutes.GET("/wstoken", s.getUserWsToken)
+	userRoutes.GET("/wstoken", s.authMiddleware, s.getUserWsToken)
 
 	roomRoutes := v1.Group("/rooms", s.authMiddleware)
 	roomRoutes.GET("/", s.handleGetRooms)
+	roomRoutes.POST("/new", s.handleCreateRoom)
 
 	v1.GET("/ws", s.handleWebSocket)
 
@@ -83,8 +84,9 @@ func handlePing(c *gin.Context) {
 }
 
 func (s *APIServer) handleWebSocket(c *gin.Context) {
-	tokenString := c.Param("token")
+	tokenString := c.Query("token")
 	if tokenString == "" {
+		logger.Error("empty token string")
 		failureResponse(c, http.StatusUnauthorized, "invalid token")
 		return
 	}
@@ -103,11 +105,5 @@ func (s *APIServer) handleWebSocket(c *gin.Context) {
 		return
 	}
 
-	roomCodes, err := s.DataLayer.GetRoomCodesByUserID(user.ID)
-	if err != nil {
-		logger.Error("error getting room codes:", err)
-		failureResponse(c, http.StatusInternalServerError, "db error")
-		return
-	}
-	s.WebSocketHub.ServeWs(c, user.Username, roomCodes)
+	s.WebSocketHub.ServeWs(c, user.Username)
 }

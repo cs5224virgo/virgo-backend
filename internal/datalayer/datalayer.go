@@ -11,19 +11,31 @@ import (
 	sqlc "github.com/cs5224virgo/virgo/db/generated"
 	"github.com/cs5224virgo/virgo/internal/jwt"
 	"github.com/cs5224virgo/virgo/logger"
+	"github.com/sqids/sqids-go"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const sqidconst = 420
 
 var ErrLoginFailed = errors.New("authentication failed")
 var ErrIDZero = errors.New("id is zero")
 
 type DataLayer struct {
-	DB *db.DB
+	DB    *db.DB
+	sqids *sqids.Sqids
 }
 
 func NewDataLayer(db *db.DB) *DataLayer {
+	sqids, err := sqids.New(sqids.Options{
+		Alphabet:  "tGWpFSsDab063e1o8wTkx5i9MuOYQBJXcjynK2HI7m4UPZfEdrLlRqAhVvNzCg",
+		MinLength: 7,
+	})
+	if err != nil {
+		logger.Fatal("cannot init sqids", err)
+	}
 	return &DataLayer{
-		DB: db,
+		DB:    db,
+		sqids: sqids,
 	}
 }
 

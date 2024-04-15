@@ -25,5 +25,11 @@ services:
     volumes:
       - virgo_db:/var/lib/postgresql/data
 
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"  # Exposes Adminer on port 8080 of the host
+    restart: unless-stopped
+
 volumes:
   virgo_db:

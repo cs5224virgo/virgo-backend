@@ -18,16 +18,11 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxEventSize = 1024
 
 	// maximum amount of message held in memory
-	maxMessageBuffer = 32
+	maxEventBuffer = 32
 )
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
@@ -39,12 +34,12 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan Message
+	send chan Event
 }
 
 // NewClient creates a new client
-func NewClient(username string, roomCodes []string, conn *websocket.Conn, hub *WebSocketHub) *Client {
-	return &Client{username: username, roomCodes: roomCodes, conn: conn, send: make(chan Message, maxMessageBuffer), hub: hub}
+func NewClient(username string, conn *websocket.Conn, hub *WebSocketHub) *Client {
+	return &Client{username: username, conn: conn, send: make(chan Event, maxEventBuffer), hub: hub}
 }
 
 // Client goroutine to read messages from client
@@ -53,12 +48,16 @@ func (c *Client) read() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
+	c.conn.SetReadLimit(maxEventSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.conn.SetPongHandler(func(string) error {
+		logger.Info("received a pong from " + c.username)
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 	for {
-		var msg Message
-		err := c.conn.ReadJSON(&msg)
+		var event Event
+		err := c.conn.ReadJSON(&event)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				logger.Errorf("error: %v", err)
@@ -67,7 +66,7 @@ func (c *Client) read() {
 			break
 		}
 		// c.hub.broadcast <- msg
-		c.hub.handleMessage(msg)
+		c.hub.handleEvent(event, c)
 	}
 }
 
@@ -94,6 +93,7 @@ func (c *Client) write() {
 				}
 			}
 		case <-ticker.C:
+			logger.Info("sending a ping to " + c.username)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return

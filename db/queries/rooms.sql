@@ -37,10 +37,14 @@ SELECT unread
 FROM rooms_users_memberships
 WHERE user_id = $1 AND room_id = $2;
 
--- name: SetUnreadCountByUserIDRoomID :exec
+-- name: SetUnreadCountByUsernameRoomCode :exec
 UPDATE rooms_users_memberships
 SET unread = $3
-WHERE user_id = $1 AND room_id = $2;
+FROM rooms, users
+WHERE rooms_users_memberships.room_id = rooms.id
+  AND rooms_users_memberships.user_id = users.id
+  AND users.username = $1
+  AND rooms.code = $2;
 
 -- name: AddUserToRoom :exec
 INSERT INTO rooms_users_memberships (room_id, user_id, unread)

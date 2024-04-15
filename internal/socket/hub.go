@@ -2,22 +2,26 @@ package socket
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/spf13/viper"
 )
 
 // WebSocketHub maintains the set of active clients and broadcasts messages to the
 // clients.
 type WebSocketHub struct {
+	DataLayer DataLayer
+
 	// Registered clients.
-	// clients map[*Client]bool
-	allClients map[*Client]bool
+	activeClients map[*Client]bool
 
 	// Registered clients, sorted by the rooms they're in
 	rooms map[string]map[*Client]bool
 
 	// Inbound messages from the clients.
-	broadcast chan Message
+	// broadcast chan Message
 
 	// Register requests from the clients.
 	register chan *Client
@@ -26,14 +30,23 @@ type WebSocketHub struct {
 	unregister chan *Client
 }
 
-func NewWebSocketHub() *WebSocketHub {
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		return origin == viper.GetString("frontend_url")
+	},
+}
+
+func NewWebSocketHub(datalayer DataLayer) *WebSocketHub {
 	return &WebSocketHub{
-		broadcast:  make(chan Message),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		// clients:    make(map[*Client]bool),
-		rooms:      make(map[string]map[*Client]bool),
-		allClients: make(map[*Client]bool),
+		DataLayer:     datalayer,
+		register:      make(chan *Client),
+		unregister:    make(chan *Client),
+		rooms:         make(map[string]map[*Client]bool),
+		activeClients: make(map[*Client]bool),
+		// broadcast:  make(chan Message),
 	}
 }
 
@@ -54,17 +67,11 @@ func (h *WebSocketHub) Run() {
 }
 
 func (h *WebSocketHub) registerNewClient(client *Client) {
-	h.allClients[client] = true
-	for _, roomCode := range client.roomCodes {
-		if h.rooms[roomCode] == nil {
-			h.rooms[roomCode] = make(map[*Client]bool)
-		}
-		h.rooms[roomCode][client] = true
-	}
+	h.activeClients[client] = true
 }
 
 func (h *WebSocketHub) removeClient(client *Client) {
-	delete(h.allClients, client)
+	delete(h.activeClients, client)
 	for _, roomCode := range client.roomCodes {
 		if _, ok := h.rooms[roomCode]; ok {
 			delete(h.rooms[roomCode], client)
@@ -73,26 +80,14 @@ func (h *WebSocketHub) removeClient(client *Client) {
 	close(client.send)
 }
 
-func (h *WebSocketHub) handleMessage(message Message) {
-	for client := range h.rooms[message.RoomCode] {
-		select {
-		case client.send <- message:
-		default:
-			close(client.send)
-			delete(h.rooms[message.RoomCode], client)
-			delete(h.allClients, client)
-		}
-	}
-}
-
 // ServeWs handles websocket requests from the peer.
-func (h *WebSocketHub) ServeWs(c *gin.Context, username string, roomCodes []string) {
+func (h *WebSocketHub) ServeWs(c *gin.Context, username string) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := NewClient(username, roomCodes, conn, h)
+	client := NewClient(username, conn, h)
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
