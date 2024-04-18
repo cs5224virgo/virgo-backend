@@ -14,8 +14,15 @@ type APIDataLayer interface {
 	GetRoomsByUserID(userID int32) ([]datalayer.DetailedRoom, error)
 	GetRoomCodesByUserID(userID int32) ([]string, error)
 	CreateRoom(userID int32, roomName string, roomDescription *string) (datalayer.DetailedRoom, error)
+	LeaveRoom(username string, roomCode string) error
+	AddUsersToRoom(usernames []string, roomCode string) (datalayer.DetailedRoom, error)
+	JoinRoom(username string, roomCode string) (datalayer.DetailedRoom, error)
+	ToDetailedUser(user sqlc.User) datalayer.DetailedUser
+	GetAllMessagesForRoom(roomCode string) ([]datalayer.DetailedMessage, error)
 }
 
 type WebSocketHub interface {
 	ServeWs(c *gin.Context, username string)
+	AnnounceAddUserToRoom(user datalayer.DetailedUser, room datalayer.DetailedRoom, isNewMember bool)
+	AnnounceLeaveRoom(user datalayer.DetailedUser, roomCode string)
 }

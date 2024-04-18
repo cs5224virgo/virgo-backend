@@ -37,35 +37,14 @@ func (s *APIServer) authMiddleware(c *gin.Context) {
 	c.Next()
 }
 
-// if an user is logged in (indicated by the JWT in the cookie), then we check the JWT
-// and extract the user for all handlers to use
-// func loginDetector() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		ok := checkJWT(c)
-// 		if !ok {
-// 			logger.Info("No JWT detected. A Guest!")
-// 		} else {
-// 			// u := getCurrentAuthUser(c)
-// 			// logger.Info("Browsing as user", u.Email)
-// 		}
-
-// 		// c.Next()
-// 	}
-// }
-
 func (s *APIServer) checkJWT(c *gin.Context) bool {
 	// get the raw jwt from cookie
-	// tokenString, err := c.Cookie("auth")
 	rawHeader := c.GetHeader("Authorization")
 	tokenString, ok := strings.CutPrefix(rawHeader, "Bearer ")
 	if !ok {
 		logger.Warn("invalid auth header. assuming not logged in")
 		return false
 	}
-	// if err != nil {
-	// 	logger.Info("error getting jwt from cookies:", err, ". Assuming not logged in.")
-	// 	return false
-	// }
 
 	if tokenString == "" {
 		logger.Warn("blank auth header. assuming not logged in")

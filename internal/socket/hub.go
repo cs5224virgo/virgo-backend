@@ -3,7 +3,10 @@ package socket
 import (
 	"log"
 	"net/http"
+	"sync"
+	"time"
 
+	"github.com/cs5224virgo/virgo/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
@@ -19,6 +22,9 @@ type WebSocketHub struct {
 
 	// Registered clients, sorted by the rooms they're in
 	rooms map[string]map[*Client]bool
+
+	// mutex
+	roomsMutex sync.Mutex
 
 	// Inbound messages from the clients.
 	// broadcast chan Message
@@ -46,11 +52,13 @@ func NewWebSocketHub(datalayer DataLayer) *WebSocketHub {
 		unregister:    make(chan *Client),
 		rooms:         make(map[string]map[*Client]bool),
 		activeClients: make(map[*Client]bool),
+		roomsMutex:    sync.Mutex{},
 		// broadcast:  make(chan Message),
 	}
 }
 
 func (h *WebSocketHub) Run() {
+	go h.cleanRooms()
 	for {
 		select {
 		// Register a client
@@ -67,10 +75,13 @@ func (h *WebSocketHub) Run() {
 }
 
 func (h *WebSocketHub) registerNewClient(client *Client) {
+	logger.Info("registering client " + client.username)
 	h.activeClients[client] = true
 }
 
 func (h *WebSocketHub) removeClient(client *Client) {
+	logger.Info("removing client " + client.username)
+	h.roomsMutex.Lock()
 	delete(h.activeClients, client)
 	for _, roomCode := range client.roomCodes {
 		if _, ok := h.rooms[roomCode]; ok {
@@ -78,6 +89,7 @@ func (h *WebSocketHub) removeClient(client *Client) {
 		}
 	}
 	close(client.send)
+	h.roomsMutex.Unlock()
 }
 
 // ServeWs handles websocket requests from the peer.
@@ -88,10 +100,34 @@ func (h *WebSocketHub) ServeWs(c *gin.Context, username string) {
 		return
 	}
 	client := NewClient(username, conn, h)
-	client.hub.register <- client
+	h.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
-	go client.write()
 	go client.read()
+	go client.write()
+}
+
+func (h *WebSocketHub) cleanRooms() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+		h.roomsMutex.Lock()
+		for roomCode := range h.rooms {
+			hasClient := false
+			for client := range h.activeClients {
+				for _, clientRoomCode := range client.roomCodes {
+					if clientRoomCode == roomCode {
+						hasClient = true
+					}
+				}
+			}
+			if !hasClient && len(h.rooms[roomCode]) == 0 {
+				delete(h.rooms, roomCode)
+			}
+		}
+		h.roomsMutex.Unlock()
+	}
 }

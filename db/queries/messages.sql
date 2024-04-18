@@ -26,3 +26,10 @@ FROM messages
 WHERE room_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2;
+
+-- name: GetMessagesByRoomCode :many
+SELECT m.*
+FROM messages m
+JOIN rooms r ON m.room_id = r.id
+WHERE r.code = $1 AND m.deleted_at IS NULL
+ORDER BY m.created_at ASC;

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/cs5224virgo/virgo/db"
@@ -64,6 +65,10 @@ func (s *DataLayer) CreateUser(params sqlc.CreateUserParams) error {
 	}
 	if params.Password == "" {
 		return fmt.Errorf("password is blank")
+	}
+	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !allowedChars.MatchString(params.Username) {
+		return fmt.Errorf("username has illegal characters")
 	}
 	_, err := s.DB.Queries.CreateUser(context.Background(), params)
 	if err != nil {

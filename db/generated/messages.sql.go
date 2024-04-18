@@ -78,6 +78,46 @@ func (q *Queries) GetLatestMessageByRoomID(ctx context.Context, roomID int32) (M
 	return i, err
 }
 
+const getMessagesByRoomCode = `-- name: GetMessagesByRoomCode :many
+SELECT m.id, m.created_at, m.updated_at, m.deleted_at, m.content, m.type, m.user_id, m.room_id
+FROM messages m
+JOIN rooms r ON m.room_id = r.id
+WHERE r.code = $1 AND m.deleted_at IS NULL
+ORDER BY m.created_at ASC
+`
+
+func (q *Queries) GetMessagesByRoomCode(ctx context.Context, code string) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, getMessagesByRoomCode, code)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Content,
+			&i.Type,
+			&i.UserID,
+			&i.RoomID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMessagesByRoomID = `-- name: GetMessagesByRoomID :many
 SELECT id, created_at, updated_at, deleted_at, content, type, user_id, room_id
 FROM messages

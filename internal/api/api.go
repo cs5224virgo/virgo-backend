@@ -38,22 +38,6 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	// CORS babyyy
 	router.Use(corsMiddleware())
 
-	// Sessions middleware
-	// store := cookie.NewStore([]byte(viper.GetString("session_cookie_key")))
-	// store.Options(sessions.Options{
-	// 	HttpOnly: true,
-	// 	MaxAge:   604800, // a week
-	// 	Path:     "/",
-	// })
-	// router.Use(sessions.Sessions("virgo_session", store))
-
-	// login detector
-	// router.Use(loginDetector())
-
-	// static
-	// router.Use(static.Serve("/static", static.LocalFile("./static", true)))
-	// router.StaticFile("/favicon.ico", "./static/favicon.ico")
-
 	// ping
 	router.GET("/ping", handlePing)
 
@@ -68,6 +52,11 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	roomRoutes := v1.Group("/rooms", s.authMiddleware)
 	roomRoutes.GET("/", s.handleGetRooms)
 	roomRoutes.POST("/new", s.handleCreateRoom)
+	roomRoutes.POST("/leave", s.handleLeaveRoom)
+	roomRoutes.POST("/adduser", s.handleAddUserToRoom)
+	roomRoutes.POST("/join", s.handleJoinRoom)
+
+	v1.POST("/messages", s.authMiddleware, s.handleGetMessages)
 
 	v1.GET("/ws", s.handleWebSocket)
 

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/cs5224virgo/virgo/logger"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -26,6 +27,7 @@ const (
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
+	clientID  string
 	username  string
 	roomCodes []string
 	hub       *WebSocketHub
@@ -39,7 +41,7 @@ type Client struct {
 
 // NewClient creates a new client
 func NewClient(username string, conn *websocket.Conn, hub *WebSocketHub) *Client {
-	return &Client{username: username, conn: conn, send: make(chan Event, maxEventBuffer), hub: hub}
+	return &Client{clientID: uuid.NewString(), username: username, conn: conn, send: make(chan Event, maxEventBuffer), hub: hub}
 }
 
 // Client goroutine to read messages from client
@@ -65,13 +67,19 @@ func (c *Client) read() {
 			logger.Errorf("error: %v", err)
 			break
 		}
-		// c.hub.broadcast <- msg
+		logger.Info("received an event from client " + c.username)
 		c.hub.handleEvent(event, c)
 	}
 }
 
 // Client goroutine to write messages to client
 func (c *Client) write() {
+	// send the first ping
+	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+		return
+	}
+	// set up write
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -80,6 +88,7 @@ func (c *Client) write() {
 	for {
 		select {
 		case message, ok := <-c.send:
+			logger.Info("sending an event to client " + c.username)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.

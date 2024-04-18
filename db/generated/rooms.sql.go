@@ -26,6 +26,23 @@ func (q *Queries) AddUserToRoom(ctx context.Context, arg AddUserToRoomParams) er
 	return err
 }
 
+const addUserToRoomUsernameRoomCode = `-- name: AddUserToRoomUsernameRoomCode :exec
+INSERT INTO rooms_users_memberships (room_id, user_id, unread)
+SELECT r.id, u.id, 0
+FROM rooms r, users u
+WHERE r.code = $2 AND u.username = $1
+`
+
+type AddUserToRoomUsernameRoomCodeParams struct {
+	Username string
+	Code     string
+}
+
+func (q *Queries) AddUserToRoomUsernameRoomCode(ctx context.Context, arg AddUserToRoomUsernameRoomCodeParams) error {
+	_, err := q.db.ExecContext(ctx, addUserToRoomUsernameRoomCode, arg.Username, arg.Code)
+	return err
+}
+
 const createRoom = `-- name: CreateRoom :one
 INSERT INTO rooms (code, name, description)
 VALUES ($1, $2, $3)
@@ -66,11 +83,11 @@ func (q *Queries) DeleteRoom(ctx context.Context, id int32) error {
 
 const getRoomByCode = `-- name: GetRoomByCode :one
 SELECT id, created_at, updated_at, deleted_at, code, name, description FROM rooms
-WHERE id = $1 AND deleted_at IS NULL LIMIT 1
+WHERE code = $1 AND deleted_at IS NULL LIMIT 1
 `
 
-func (q *Queries) GetRoomByCode(ctx context.Context, id int32) (Room, error) {
-	row := q.db.QueryRowContext(ctx, getRoomByCode, id)
+func (q *Queries) GetRoomByCode(ctx context.Context, code string) (Room, error) {
+	row := q.db.QueryRowContext(ctx, getRoomByCode, code)
 	var i Room
 	err := row.Scan(
 		&i.ID,
@@ -211,6 +228,22 @@ func (q *Queries) GetUsersInARoom(ctx context.Context, roomID int32) ([]User, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeUserFromRoom = `-- name: RemoveUserFromRoom :exec
+DELETE FROM rooms_users_memberships
+WHERE user_id = (SELECT id FROM users WHERE username = $1)
+  AND room_id = (SELECT id FROM rooms WHERE code = $2)
+`
+
+type RemoveUserFromRoomParams struct {
+	Username string
+	Code     string
+}
+
+func (q *Queries) RemoveUserFromRoom(ctx context.Context, arg RemoveUserFromRoomParams) error {
+	_, err := q.db.ExecContext(ctx, removeUserFromRoom, arg.Username, arg.Code)
+	return err
 }
 
 const setUnreadCountByUsernameRoomCode = `-- name: SetUnreadCountByUsernameRoomCode :exec

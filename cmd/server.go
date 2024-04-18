@@ -32,6 +32,7 @@ var serverCmd = &cobra.Command{
 
 		// init websocket
 		hub := socket.NewWebSocketHub(data)
+		go hub.Run()
 
 		// init apiserver
 		api := api.NewAPIServer(data, hub)

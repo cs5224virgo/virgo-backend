@@ -9,7 +9,7 @@ WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
 
 -- name: GetRoomByCode :one
 SELECT * FROM rooms
-WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
+WHERE code = $1 AND deleted_at IS NULL LIMIT 1;
 
 -- name: UpdateRoomInfo :exec
 UPDATE rooms
@@ -49,6 +49,17 @@ WHERE rooms_users_memberships.room_id = rooms.id
 -- name: AddUserToRoom :exec
 INSERT INTO rooms_users_memberships (room_id, user_id, unread)
 VALUES ($1, $2, $3);
+
+-- name: RemoveUserFromRoom :exec
+DELETE FROM rooms_users_memberships
+WHERE user_id = (SELECT id FROM users WHERE username = $1)
+  AND room_id = (SELECT id FROM rooms WHERE code = $2);
+
+-- name: AddUserToRoomUsernameRoomCode :exec
+INSERT INTO rooms_users_memberships (room_id, user_id, unread)
+SELECT r.id, u.id, 0
+FROM rooms r, users u
+WHERE r.code = $2 AND u.username = $1;
 
 -- name: DeleteRoom :exec
 UPDATE rooms

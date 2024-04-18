@@ -91,12 +91,7 @@ func (s *DataLayer) toDetailedRoom(room sqlc.Room) (*DetailedRoom, error) {
 		}
 	}
 	for _, user := range users {
-		detailedUser := DetailedUser{
-			Username: user.Username,
-		}
-		if user.DisplayName.Valid {
-			detailedUser.DisplayName = &user.DisplayName.String
-		}
+		detailedUser := s.ToDetailedUser(user)
 		unread, err := s.DB.Queries.GetUnreadCountByUserIDRoomID(context.Background(), sqlc.GetUnreadCountByUserIDRoomIDParams{
 			UserID: user.ID,
 			RoomID: room.ID,
@@ -111,6 +106,16 @@ func (s *DataLayer) toDetailedRoom(room sqlc.Room) (*DetailedRoom, error) {
 		detailedRoom.Users = append(detailedRoom.Users, detailedUserUnread)
 	}
 	return &detailedRoom, nil
+}
+
+func (s *DataLayer) ToDetailedUser(user sqlc.User) DetailedUser {
+	detailedUser := DetailedUser{
+		Username: user.Username,
+	}
+	if user.DisplayName.Valid {
+		detailedUser.DisplayName = &user.DisplayName.String
+	}
+	return detailedUser
 }
 
 func (s *DataLayer) GetRoomCodesByUserID(userID int32) ([]string, error) {
@@ -197,4 +202,64 @@ func (s *DataLayer) CreateRoom(userID int32, roomName string, roomDescription *s
 		return DetailedRoom{}, err
 	}
 	return *detailedRoom, nil
+}
+
+func (s *DataLayer) LeaveRoom(username string, roomCode string) error {
+	if username == "" || roomCode == "" {
+		return ErrIDZero
+	}
+	err := s.DB.Queries.RemoveUserFromRoom(context.Background(), sqlc.RemoveUserFromRoomParams{
+		Username: username,
+		Code:     roomCode,
+	})
+	if err != nil {
+		return fmt.Errorf("database failure: %w", err)
+	}
+	return nil
+}
+
+func (s *DataLayer) AddUsersToRoom(usernames []string, roomCode string) (DetailedRoom, error) {
+	if roomCode == "" || len(usernames) == 0 {
+		return DetailedRoom{}, ErrIDZero
+	}
+	for _, username := range usernames {
+		err := s.DB.Queries.AddUserToRoomUsernameRoomCode(context.Background(), sqlc.AddUserToRoomUsernameRoomCodeParams{
+			Username: username,
+			Code:     roomCode,
+		})
+		if err != nil {
+			return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+		}
+	}
+	room, err := s.DB.Queries.GetRoomByCode(context.Background(), roomCode)
+	if err != nil {
+		return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+	}
+	du, err := s.toDetailedRoom(room)
+	if err != nil {
+		return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+	}
+	return *du, err
+}
+
+func (s *DataLayer) JoinRoom(username string, roomCode string) (DetailedRoom, error) {
+	if username == "" || roomCode == "" {
+		return DetailedRoom{}, ErrIDZero
+	}
+	err := s.DB.Queries.AddUserToRoomUsernameRoomCode(context.Background(), sqlc.AddUserToRoomUsernameRoomCodeParams{
+		Username: username,
+		Code:     roomCode,
+	})
+	if err != nil {
+		return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+	}
+	room, err := s.DB.Queries.GetRoomByCode(context.Background(), roomCode)
+	if err != nil {
+		return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+	}
+	du, err := s.toDetailedRoom(room)
+	if err != nil {
+		return DetailedRoom{}, fmt.Errorf("database failure: %w", err)
+	}
+	return *du, err
 }

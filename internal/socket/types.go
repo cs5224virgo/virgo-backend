@@ -2,18 +2,26 @@ package socket
 
 import (
 	"encoding/json"
+
+	"github.com/cs5224virgo/virgo/internal/datalayer"
 )
 
 type DataLayer interface {
 	SetUnreadCount(username string, roomCode string, unread int) error
+	NewMessage(content string, roomCode string, username string) (datalayer.DetailedMessage, datalayer.DetailedRoom, error)
 }
 
 type EventType string
 
 const (
+	EventTypeResumeRoomReq   EventType = "req-resume-room"
 	EventTypeJoinRoomReq     EventType = "req-join-room"
 	EventTypeJoinRoomResp    EventType = "resp-join-room"
+	EventTypeLeaveRoomResp   EventType = "resp-leave-room"
+	EventTypeNewRoomResp     EventType = "resp-new-room"
 	EventTypeUpdateUnreadReq EventType = "req-update-unread"
+	EventTypeNewMessageReq   EventType = "req-new-message"
+	EventTypeNewMessageResp  EventType = "resp-new-message"
 )
 
 type Event struct {
@@ -21,8 +29,28 @@ type Event struct {
 	Data      any       `json:"data"`
 }
 
-type JoinRoomEventResp struct {
+type ResumeRoomEventReq struct {
+	Username string `json:"username"`
 	RoomCode string `json:"roomCode"`
+}
+
+type JoinRoomEventResp struct {
+	User     datalayer.DetailedUser `json:"user"`
+	RoomCode string                 `json:"roomCode"`
+}
+
+type NewRoomEventResp struct {
+	Room datalayer.DetailedRoom `json:"room"`
+}
+
+type LeaveRoomEventResp struct {
+	User     datalayer.DetailedUser `json:"user"`
+	RoomCode string                 `json:"roomCode"`
+}
+
+type NewMessageEventResp struct {
+	Message datalayer.DetailedMessage `json:"message"`
+	Room    datalayer.DetailedRoom    `json:"room"`
 }
 
 type JoinRoomEventReq struct {
@@ -34,6 +62,12 @@ type UpdateUnreadReq struct {
 	Username string `json:"username"`
 	RoomCode string `json:"roomCode"`
 	Unread   int    `json:"unread"`
+}
+
+type NewMessageEventReq struct {
+	Content  string `json:"content"`
+	Username string `json:"username"`
+	RoomCode string `json:"roomCode"`
 }
 
 // Message struct to hold message data
@@ -53,12 +87,14 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 	}
 
 	switch inner.EventType {
+	case EventTypeResumeRoomReq:
+		e.Data = new(ResumeRoomEventReq)
 	case EventTypeJoinRoomReq:
 		e.Data = new(JoinRoomEventReq)
-	case EventTypeJoinRoomResp:
-		e.Data = new(JoinRoomEventResp)
 	case EventTypeUpdateUnreadReq:
 		e.Data = new(UpdateUnreadReq)
+	case EventTypeNewMessageReq:
+		e.Data = new(NewMessageEventReq)
 	}
 
 	type eventAlias Event
