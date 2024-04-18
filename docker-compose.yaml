@@ -31,5 +31,17 @@ services:
       - "8080:8080"  # Exposes Adminer on port 8080 of the host
     restart: unless-stopped
 
+  # virgo-frontend:
+  #   build:
+  #     context: ../virgo-frontend
+  #     dockerfile: ../virgo-frontend/Dockerfile
+  #   ports:
+  #     - "3000:80"
+  #   environment:
+  #     REACT_APP_SERVER_URL: "http://127.0.0.1:7000"
+  #     REACT_APP_WEBSOCKET_SERVER_URL: "ws://127.0.0.1:7000/v1/ws"
+  #   depends_on:
+  #     - virgo
+
 volumes:
   virgo_db:

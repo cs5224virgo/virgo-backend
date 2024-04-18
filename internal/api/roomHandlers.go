@@ -52,6 +52,9 @@ func (s *APIServer) handleCreateRoom(c *gin.Context) {
 		return
 	}
 
+	du := s.DataLayer.ToDetailedUser(*user)
+	go s.WebSocketHub.AnnounceAddUserToRoom(du, room, false)
+
 	type resRoomStruct struct {
 		Room datalayer.DetailedRoom `json:"room"`
 	}
