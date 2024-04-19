@@ -75,12 +75,15 @@ func (h *WebSocketHub) Run() {
 }
 
 func (h *WebSocketHub) registerNewClient(client *Client) {
-	logger.Info("registering client " + client.username)
+	h.roomsMutex.Lock()
+	// logger.Info("registering client " + client.username)
 	h.activeClients[client] = true
+	// h.debugRooms()
+	h.roomsMutex.Unlock()
 }
 
 func (h *WebSocketHub) removeClient(client *Client) {
-	logger.Info("removing client " + client.username)
+	// logger.Info("removing client " + client.username)
 	h.roomsMutex.Lock()
 	delete(h.activeClients, client)
 	for _, roomCode := range client.roomCodes {
@@ -89,6 +92,7 @@ func (h *WebSocketHub) removeClient(client *Client) {
 		}
 	}
 	close(client.send)
+	// h.debugRooms()
 	h.roomsMutex.Unlock()
 }
 
@@ -128,6 +132,18 @@ func (h *WebSocketHub) cleanRooms() {
 				delete(h.rooms, roomCode)
 			}
 		}
+		// h.debugRooms()
 		h.roomsMutex.Unlock()
+	}
+}
+
+func (h *WebSocketHub) debugRooms() {
+	for roomCode := range h.rooms {
+		for client := range h.rooms[roomCode] {
+			logger.Info("room " + roomCode + " has user " + client.username + " with ID " + client.clientID)
+		}
+	}
+	for client := range h.activeClients {
+		logger.Info("user " + client.username + " is connected with client " + client.clientID)
 	}
 }

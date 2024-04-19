@@ -9,6 +9,7 @@ func (h *WebSocketHub) handleResumeRoom(event *ResumeRoomEventReq, client *Clien
 	}
 	h.rooms[event.RoomCode][client] = true
 	client.roomCodes = append(client.roomCodes, event.RoomCode)
+	// h.debugRooms()
 	h.roomsMutex.Unlock()
 }
 
@@ -39,6 +40,7 @@ func (h *WebSocketHub) handleNewMessage(event *NewMessageEventReq, client *Clien
 			client.send <- resp
 		}
 	}
+	// h.debugRooms()
 	h.roomsMutex.Unlock()
 }
 

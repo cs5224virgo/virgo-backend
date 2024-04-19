@@ -53,7 +53,7 @@ func (c *Client) read() {
 	c.conn.SetReadLimit(maxEventSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
-		logger.Info("received a pong from " + c.username)
+		// logger.Info("received a pong from " + c.username)
 		c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
@@ -67,7 +67,7 @@ func (c *Client) read() {
 			logger.Errorf("error: %v", err)
 			break
 		}
-		logger.Info("received an event from client " + c.username)
+		// logger.Info("received an event " + string(event.EventType) + " from client " + c.username)
 		c.hub.handleEvent(event, c)
 	}
 }
@@ -88,7 +88,7 @@ func (c *Client) write() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			logger.Info("sending an event to client " + c.username)
+			// logger.Info("sending a event " + string(message.EventType) + " to client " + c.username)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
@@ -102,7 +102,7 @@ func (c *Client) write() {
 				}
 			}
 		case <-ticker.C:
-			logger.Info("sending a ping to " + c.username)
+			// logger.Info("sending a ping to " + c.username)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return

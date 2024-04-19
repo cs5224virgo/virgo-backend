@@ -50,6 +50,7 @@ func (h *WebSocketHub) AnnounceAddUserToRoom(user datalayer.DetailedUser, room d
 		}
 	}
 
+	// h.debugRooms()
 	h.roomsMutex.Unlock()
 }
 
@@ -80,5 +81,6 @@ func (h *WebSocketHub) AnnounceLeaveRoom(user datalayer.DetailedUser, roomCode s
 		}
 	}
 
+	// h.debugRooms()
 	h.roomsMutex.Unlock()
 }
