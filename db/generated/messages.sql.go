@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 )
 
 const createMessage = `-- name: CreateMessage :one
@@ -76,6 +77,53 @@ func (q *Queries) GetLatestMessageByRoomID(ctx context.Context, roomID int32) (M
 		&i.RoomID,
 	)
 	return i, err
+}
+
+const getMessagesAfterTimeByRoomCode = `-- name: GetMessagesAfterTimeByRoomCode :many
+SELECT m.id, m.created_at, m.updated_at, m.deleted_at, m.content, m.type, m.user_id, m.room_id
+FROM messages m
+JOIN rooms r ON m.room_id = r.id
+WHERE r.code = $1
+  AND m.created_at > $2
+  AND m.deleted_at IS NULL
+ORDER BY m.created_at ASC
+`
+
+type GetMessagesAfterTimeByRoomCodeParams struct {
+	Code      string
+	CreatedAt time.Time
+}
+
+func (q *Queries) GetMessagesAfterTimeByRoomCode(ctx context.Context, arg GetMessagesAfterTimeByRoomCodeParams) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, getMessagesAfterTimeByRoomCode, arg.Code, arg.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Content,
+			&i.Type,
+			&i.UserID,
+			&i.RoomID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getMessagesByRoomCode = `-- name: GetMessagesByRoomCode :many

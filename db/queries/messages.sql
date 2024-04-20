@@ -33,3 +33,12 @@ FROM messages m
 JOIN rooms r ON m.room_id = r.id
 WHERE r.code = $1 AND m.deleted_at IS NULL
 ORDER BY m.created_at ASC;
+
+-- name: GetMessagesAfterTimeByRoomCode :many
+SELECT m.*
+FROM messages m
+JOIN rooms r ON m.room_id = r.id
+WHERE r.code = $1
+  AND m.created_at > $2
+  AND m.deleted_at IS NULL
+ORDER BY m.created_at ASC;

@@ -12,14 +12,16 @@ import (
 type APIServer struct {
 	DataLayer    APIDataLayer
 	WebSocketHub WebSocketHub
+	AiClient     AiClient
 
 	router *gin.Engine
 }
 
-func NewAPIServer(datalayer APIDataLayer, hub WebSocketHub) *APIServer {
+func NewAPIServer(datalayer APIDataLayer, hub WebSocketHub, aiclient AiClient) *APIServer {
 	sv := APIServer{
 		DataLayer:    datalayer,
 		WebSocketHub: hub,
+		AiClient:     aiclient,
 	}
 	sv.router = sv.initRoutes()
 	return &sv
@@ -57,6 +59,7 @@ func (s *APIServer) initRoutes() *gin.Engine {
 	roomRoutes.POST("/join", s.handleJoinRoom)
 
 	v1.POST("/messages", s.authMiddleware, s.handleGetMessages)
+	v1.POST("/summary", s.authMiddleware, s.handleSummary)
 
 	v1.GET("/ws", s.handleWebSocket)
 

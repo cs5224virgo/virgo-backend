@@ -4,6 +4,7 @@ import (
 	"github.com/cs5224virgo/virgo/db"
 	"github.com/cs5224virgo/virgo/internal/api"
 	"github.com/cs5224virgo/virgo/internal/datalayer"
+	"github.com/cs5224virgo/virgo/internal/googleaiclient"
 	"github.com/cs5224virgo/virgo/internal/socket"
 	"github.com/cs5224virgo/virgo/logger"
 	"github.com/spf13/cobra"
@@ -34,8 +35,15 @@ var serverCmd = &cobra.Command{
 		hub := socket.NewWebSocketHub(data)
 		go hub.Run()
 
+		// init google ai client
+		googleai, err := googleaiclient.New(viper.GetString("geminiApiKey"))
+		if err != nil {
+			logger.Fatal("cannot init google ai client:", err)
+		}
+		defer googleai.Close()
+
 		// init apiserver
-		api := api.NewAPIServer(data, hub)
+		api := api.NewAPIServer(data, hub, googleai)
 
 		// lmao
 		logger.Info(`

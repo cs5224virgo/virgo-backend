@@ -35,6 +35,29 @@ func (s *DataLayer) GetAllMessagesForRoom(roomCode string) ([]DetailedMessage, e
 	return ret, nil
 }
 
+func (s *DataLayer) GetLastWeekMessagesForRoom(roomCode string) ([]DetailedMessage, error) {
+	if roomCode == "" {
+		return nil, ErrIDZero
+	}
+	lastWeek := time.Now().AddDate(0, 0, -7)
+	msgs, err := s.DB.Queries.GetMessagesAfterTimeByRoomCode(context.Background(), sqlc.GetMessagesAfterTimeByRoomCodeParams{
+		Code:      roomCode,
+		CreatedAt: lastWeek,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("database failure: %w", err)
+	}
+	ret := []DetailedMessage{}
+	for _, msg := range msgs {
+		du, err := s.toDetailedMessage(msg)
+		if err != nil {
+			return nil, fmt.Errorf("database failure: %w", err)
+		}
+		ret = append(ret, *du)
+	}
+	return ret, nil
+}
+
 func (s *DataLayer) toDetailedMessage(msg sqlc.Message) (*DetailedMessage, error) {
 	room, err := s.DB.Queries.GetRoomByID(context.Background(), msg.RoomID)
 	if err != nil {

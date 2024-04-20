@@ -19,10 +19,15 @@ type APIDataLayer interface {
 	JoinRoom(username string, roomCode string) (datalayer.DetailedRoom, error)
 	ToDetailedUser(user sqlc.User) datalayer.DetailedUser
 	GetAllMessagesForRoom(roomCode string) ([]datalayer.DetailedMessage, error)
+	GetLastWeekMessagesForRoom(roomCode string) ([]datalayer.DetailedMessage, error)
 }
 
 type WebSocketHub interface {
 	ServeWs(c *gin.Context, username string)
 	AnnounceAddUserToRoom(user datalayer.DetailedUser, room datalayer.DetailedRoom, isNewMember bool)
 	AnnounceLeaveRoom(user datalayer.DetailedUser, roomCode string)
+}
+
+type AiClient interface {
+	GetSummary(conversation string) (string, error)
 }
