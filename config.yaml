@@ -1,6 +1,7 @@
 env: dev
 port: "7000"
 frontend_url: "http://localhost:3000"
+geminiApiKey: "yourapikeyhere"
 db:
   username: virgo
   password: virgo

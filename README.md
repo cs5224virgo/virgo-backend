@@ -7,8 +7,10 @@ Virgo chat app backend written in go
 Do these following steps to set up the project locally:
 
 1. Clone the project && cd into the project
-1. Install docker && docker compose ([docs](https://docs.docker.com/engine/install/)). Make sure you can run `docker` and `docker compose`.
-1. Run the real thing: `docker compose up --build`
+2. Install docker && docker compose ([docs](https://docs.docker.com/engine/install/)). Make sure you can run `docker` and `docker compose`.
+3. For the AI Summary feature to run, you need a Google API Key. Head to https://aistudio.google.com/app/apikey to obtain a key, then modify `config.yaml` to put that key in. This is required for backend to run
+4. Run the real thing: `docker compose up --build`
+5. Also run the frontend at the same time (`npm start`) and go to localhost:3000 to use the app!
 
 If you are aiming to develop / add features, also do these things:
 
